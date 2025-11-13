@@ -1,0 +1,8 @@
+/.vscode
+/.embuild
+/target
+/Cargo.lock
+.cargo
+.env
+./enable_env.sh
+.github
