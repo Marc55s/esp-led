@@ -26,14 +26,17 @@ experimental = ["esp-idf-svc/experimental"]
 log = "0.4"
 esp-idf-svc = "0.51"
 esp-idf-hal = "*"
+esp-idf-sys = "*"
 
 anyhow = "1.0.100"
 serde_json = "1.0.145"
 embedded-svc = "0.28.1"
 serde = "1.0.228"
 
+smart-leds-trait = { version = "0.3", optional = true }
+embedded-graphics-core = { version = "0.4", optional = true }
 smart-leds = "*"
-ws2812-esp32-rmt-driver = { version = "*", features = ["smart-leds-trait"] }
+ws2812-esp32-rmt-driver = { version = "*", features = ["smart-leds-trait", "embedded-graphics-core"] }
 
 # --- Optional Embassy Integration ---
 # esp-idf-svc = { version = "0.51", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
