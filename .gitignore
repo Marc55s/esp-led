@@ -1,5 +1,6 @@
 /.vscode
 /.embuild
 /target
+/.direnv
 .env
 .github
