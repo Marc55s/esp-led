@@ -6,8 +6,7 @@ use embedded_svc::{
     wifi::{ClientConfiguration, Configuration, AuthMethod},
 };
 
-use esp_idf_svc::hal::peripherals::Peripherals;
-
+use esp_idf_hal::{peripherals::Peripherals, modem::Modem};
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     http::server::EspHttpServer,
@@ -40,18 +39,17 @@ struct FormData<'a> {
     birthplace: &'a str,
 }
 
-pub fn wifi_setup() -> anyhow::Result<()> {
-    esp_idf_svc::sys::link_patches();
-    esp_idf_svc::log::EspLogger::initialize_default();
+pub fn wifi_setup(modem: Modem) -> anyhow::Result<()> {
+    // esp_idf_svc::sys::link_patches();
+    // esp_idf_svc::log::EspLogger::initialize_default();
 
     // Setup Wifi
 
-    let peripherals = Peripherals::take()?;
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
 
     let mut wifi = BlockingWifi::wrap(
-        EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))?,
+        EspWifi::new(modem, sys_loop.clone(), Some(nvs))?,
         sys_loop,
     )?;
 
