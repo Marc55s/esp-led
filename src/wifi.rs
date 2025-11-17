@@ -6,7 +6,7 @@ use embedded_svc::{
     wifi::{ClientConfiguration, Configuration, AuthMethod},
 };
 
-use esp_idf_hal::{peripherals::Peripherals, modem::Modem};
+use esp_idf_hal::modem::Modem;
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     http::server::EspHttpServer,
@@ -14,10 +14,8 @@ use esp_idf_svc::{
     wifi::{BlockingWifi, EspWifi},
 };
 
-
-use log::*;
-
 use serde::Deserialize;
+use log::*;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASSWORD: &str = env!("WIFI_PASS");
@@ -39,12 +37,7 @@ struct FormData<'a> {
     birthplace: &'a str,
 }
 
-pub fn wifi_setup(modem: Modem) -> anyhow::Result<()> {
-    // esp_idf_svc::sys::link_patches();
-    // esp_idf_svc::log::EspLogger::initialize_default();
-
-    // Setup Wifi
-
+pub fn wifi_setup(modem: Modem, tx: tokio::sync::watch::Sender<u8>) -> anyhow::Result<()> {
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
 
@@ -63,7 +56,7 @@ pub fn wifi_setup(modem: Modem) -> anyhow::Result<()> {
             .map(|_| ())
     })?;
 
-    server.fn_handler::<anyhow::Error, _>("/post", Method::Post, |mut req| {
+    server.fn_handler::<anyhow::Error, _>("/post", Method::Post, move |mut req| {
         let len = req.content_len().unwrap_or(0) as usize;
 
         if len > MAX_LEN {
@@ -82,6 +75,7 @@ pub fn wifi_setup(modem: Modem) -> anyhow::Result<()> {
                 "Hello, {}-year-old {} from {}!",
                 form.age, form.first_name, form.birthplace
             )?;
+            tx.send(form.age as u8).unwrap();
         } else {
             resp.write_all("JSON error".as_bytes())?;
         }
