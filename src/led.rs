@@ -9,20 +9,20 @@ use ws2812_esp32_rmt_driver::Ws2812Esp32Rmt;
 use std::thread;
 use log::*;
 
+use crate::wifi::HsvColor;
+
 pub fn led_setup(
     channel: impl Peripheral<P = impl RmtChannel> + 'static,
     led_pin: impl Peripheral<P = impl OutputPin> + 'static,
-    mut rx: tokio::sync::watch::Receiver<u8>,
+    mut rx: tokio::sync::watch::Receiver<Vec<HsvColor>>,
 ) {
     let mut ws2812 = Ws2812Esp32Rmt::new(channel, led_pin).unwrap();
     thread::spawn(move || {
         info!("LED thread started");
         loop {
-            let val = *rx.borrow_and_update();
-
-            let color = hsv2rgb(Hsv { hue: val as u8, sat: val as u8, val: val as u8 });
-            let pixel_iter = std::iter::repeat(color).take(10);
-            let _ = ws2812.write(pixel_iter);
+            let val = &(*rx.borrow_and_update());
+            let led_from_channel = val.iter().map(|e| e.to_smart_hsv()).map(|e| hsv2rgb(e));
+            let _ = ws2812.write(led_from_channel);
             sleep(Duration::from_millis(100));
         }
     });

@@ -3,7 +3,7 @@ use core::convert::TryInto;
 use embedded_svc::{
     http::{Headers, Method},
     io::{Read, Write},
-    wifi::{ClientConfiguration, Configuration, AuthMethod},
+    wifi::{AuthMethod, ClientConfiguration, Configuration},
 };
 
 use esp_idf_hal::modem::Modem;
@@ -14,15 +14,15 @@ use esp_idf_svc::{
     wifi::{BlockingWifi, EspWifi},
 };
 
-use serde::Deserialize;
 use log::*;
+use serde::Deserialize;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASSWORD: &str = env!("WIFI_PASS");
 static INDEX_HTML: &str = include_str!("http_server_page.html");
 
 // Max payload length
-const MAX_LEN: usize = 128;
+const MAX_LEN: usize = 8192;
 
 // Need lots of stack to parse JSON
 const STACK_SIZE: usize = 10240;
@@ -30,21 +30,33 @@ const STACK_SIZE: usize = 10240;
 // Wi-Fi channel, between 1 and 11
 const CHANNEL: u8 = 11;
 
+use smart_leds::hsv::Hsv;
+
 #[derive(Deserialize)]
-struct FormData<'a> {
-    first_name: &'a str,
-    age: u32,
-    birthplace: &'a str,
+pub struct HsvColor {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
 }
 
-pub fn wifi_setup(modem: Modem, tx: tokio::sync::watch::Sender<u8>) -> anyhow::Result<()> {
+impl HsvColor {
+    pub fn to_smart_hsv(&self) -> Hsv {
+        return Hsv {
+            hue: self.r,
+            sat: self.g,
+            val: self.b,
+        };
+    }
+}
+
+pub fn wifi_setup(
+    modem: Modem,
+    tx: tokio::sync::watch::Sender<Vec<HsvColor>>,
+) -> anyhow::Result<()> {
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
 
-    let mut wifi = BlockingWifi::wrap(
-        EspWifi::new(modem, sys_loop.clone(), Some(nvs))?,
-        sys_loop,
-    )?;
+    let mut wifi = BlockingWifi::wrap(EspWifi::new(modem, sys_loop.clone(), Some(nvs))?, sys_loop)?;
 
     connect_wifi(&mut wifi)?;
 
@@ -69,15 +81,14 @@ pub fn wifi_setup(modem: Modem, tx: tokio::sync::watch::Sender<u8>) -> anyhow::R
         req.read_exact(&mut buf)?;
         let mut resp = req.into_ok_response()?;
 
-        if let Ok(form) = serde_json::from_slice::<FormData>(&buf) {
-            write!(
-                resp,
-                "Hello, {}-year-old {} from {}!",
-                form.age, form.first_name, form.birthplace
-            )?;
-            tx.send(form.age as u8).unwrap();
-        } else {
-            resp.write_all("JSON error".as_bytes())?;
+        match serde_json::from_slice::<Vec<HsvColor>>(&buf) {
+            Ok(form) => {
+                write!(resp, "Received Led Data")?;
+                tx.send(form).unwrap();
+            }
+            Err(e) => {
+                resp.write_all(e.to_string().as_bytes())?;
+            }
         }
 
         Ok(())
@@ -127,4 +138,3 @@ fn create_server() -> anyhow::Result<EspHttpServer<'static>> {
 
     Ok(EspHttpServer::new(&server_configuration)?)
 }
-
