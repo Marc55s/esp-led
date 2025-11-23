@@ -53,7 +53,7 @@
           };
 
           devShells.default = pkgs.mkShell {
-            packages = [ pkgs.espflash pkgs.python3 esp-idf pkgs.ldproxy toolchain esp32.packages.x86_64-linux.toolchain-hook ];
+            packages = [ pkgs.bacon pkgs.espflash pkgs.python3 esp-idf pkgs.ldproxy toolchain esp32.packages.x86_64-linux.toolchain-hook ];
           };
         };
       flake = { };
