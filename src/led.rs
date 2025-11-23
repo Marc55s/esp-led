@@ -18,14 +18,8 @@ pub struct LedData {
 
 impl LedData {
     pub fn convert_to_iter(self) -> Result<Vec<RGB<u8>>, String> {
-        if self.h.len() % 3 != 0 {
-            return Err("R length is not divisible by 3".to_string());
-        } else if self.s.len() % 3 != 0 {
-            return Err("G length is not divisible by 3".to_string());
-        } else if self.v.len() % 3 != 0 {
-            return Err("B length is not divisible by 3".to_string());
-        } else if self.h.len() != self.s.len() || self.h.len() != self.v.len() {
-            return Err("RGB lengths are not equal".to_string());
+        if self.h.len() != self.s.len() || self.h.len() != self.v.len() {
+            return Err("HSV lengths are not equal".to_string());
         }
 
         Ok(self.h.into_iter().zip(self.s).zip(self.v).map(|((h, s), v)| {

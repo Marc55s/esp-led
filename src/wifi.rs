@@ -68,7 +68,10 @@ pub fn wifi_setup(
                 info!("Recieved Post Request");
                 write!(resp, "Received Led Data")?;
                 match form.convert_to_iter() {
-                    Ok(converted) => tx.send(converted).expect("Send Led data into channel"),
+                    Ok(converted) => {
+                        // dbg!(&converted);
+                        tx.send(converted).expect("Send Led data into channel");
+                    },
                     Err(e) => {
                         resp.write_all(e.to_string().as_bytes())?;
                     }
