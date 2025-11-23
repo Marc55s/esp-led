@@ -15,7 +15,8 @@ use esp_idf_svc::{
 };
 
 use log::*;
-use serde::Deserialize;
+use smart_leds::RGB;
+use crate::led::LedData;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASSWORD: &str = env!("WIFI_PASS");
@@ -30,28 +31,9 @@ const STACK_SIZE: usize = 10240;
 // Wi-Fi channel, between 1 and 11
 const CHANNEL: u8 = 11;
 
-use smart_leds::hsv::Hsv;
-
-#[derive(Deserialize)]
-pub struct HsvColor {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
-
-impl HsvColor {
-    pub fn to_smart_hsv(&self) -> Hsv {
-        return Hsv {
-            hue: self.r,
-            sat: self.g,
-            val: self.b,
-        };
-    }
-}
-
 pub fn wifi_setup(
     modem: Modem,
-    tx: tokio::sync::watch::Sender<Vec<HsvColor>>,
+    tx: tokio::sync::watch::Sender<Vec<RGB<u8>>>,
 ) -> anyhow::Result<()> {
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
@@ -68,7 +50,7 @@ pub fn wifi_setup(
             .map(|_| ())
     })?;
 
-    server.fn_handler::<anyhow::Error, _>("/post", Method::Post, move |mut req| {
+    server.fn_handler::<anyhow::Error, _>("/led", Method::Post, move |mut req| {
         let len = req.content_len().unwrap_or(0) as usize;
 
         if len > MAX_LEN {
@@ -81,10 +63,16 @@ pub fn wifi_setup(
         req.read_exact(&mut buf)?;
         let mut resp = req.into_ok_response()?;
 
-        match serde_json::from_slice::<Vec<HsvColor>>(&buf) {
+        match serde_json::from_slice::<LedData>(&buf) {
             Ok(form) => {
+                info!("Recieved Post Request");
                 write!(resp, "Received Led Data")?;
-                tx.send(form).unwrap();
+                match form.convert_to_iter() {
+                    Ok(converted) => tx.send(converted).expect("Send Led data into channel"),
+                    Err(e) => {
+                        resp.write_all(e.to_string().as_bytes())?;
+                    }
+                }
             }
             Err(e) => {
                 resp.write_all(e.to_string().as_bytes())?;

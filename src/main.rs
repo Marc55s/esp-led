@@ -1,10 +1,11 @@
 mod wifi;
 mod led;
 
-use crate::wifi::{wifi_setup, HsvColor};
+use crate::wifi::{wifi_setup};
 use crate::led::{led_setup};
 
 use esp_idf_hal::peripherals::Peripherals;
+use smart_leds::RGB;
 use tokio::sync::watch::channel;
 use log::*;
 
@@ -17,13 +18,7 @@ fn main() -> anyhow::Result<()> {
     let channel_rmt = peripherals.rmt.channel0;
     let modem = peripherals.modem;
 
-    let mut list: Vec<HsvColor> = Vec::new();
-    list.push(HsvColor { r: 0, g: 0, b: 0 });
-    let (tx, rx) = channel::<Vec<HsvColor>>(list);
-
-
-
-
+    let (tx, rx) = channel::<Vec<RGB<u8>>>(Vec::new());
 
     info!("check");
     wifi_setup(modem, tx).expect("Wifi setup failed");
