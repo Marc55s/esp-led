@@ -33,7 +33,7 @@ const CHANNEL: u8 = 11;
 
 pub fn wifi_setup(
     modem: Modem,
-    tx: tokio::sync::watch::Sender<Vec<RGB<u8>>>,
+    tx: std::sync::mpsc::Sender<Vec<RGB<u8>>>,
 ) -> anyhow::Result<()> {
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;

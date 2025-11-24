@@ -6,7 +6,7 @@ use crate::led::{led_setup};
 
 use esp_idf_hal::peripherals::Peripherals;
 use smart_leds::RGB;
-use tokio::sync::watch::channel;
+use std::sync::mpsc::channel;
 use log::*;
 
 fn main() -> anyhow::Result<()> {
@@ -18,7 +18,7 @@ fn main() -> anyhow::Result<()> {
     let channel_rmt = peripherals.rmt.channel0;
     let modem = peripherals.modem;
 
-    let (tx, rx) = channel::<Vec<RGB<u8>>>(Vec::new());
+    let (tx, rx) = channel::<Vec<RGB<u8>>>();
 
     info!("check");
     wifi_setup(modem, tx).expect("Wifi setup failed");
