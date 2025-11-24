@@ -1,9 +1,7 @@
 use core::convert::TryInto;
-
 use embedded_svc::{
     wifi::{AuthMethod, ClientConfiguration, Configuration},
 };
-
 use esp_idf_hal::modem::Modem;
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,

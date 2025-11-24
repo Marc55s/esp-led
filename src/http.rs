@@ -27,7 +27,7 @@ fn create_server() -> Result<EspHttpServer<'static>> {
     Ok(EspHttpServer::new(&server_configuration)?)
 }
 
-pub fn http_routes(tx: std::sync::mpsc::Sender<Vec<RGB<u8>>>) -> Result<()> {
+pub fn http_routes(tx: std::sync::mpsc::SyncSender<Vec<RGB<u8>>>) -> Result<()> {
     let mut server = create_server()?;
 
     server.fn_handler("/", Method::Get, |req| {
@@ -55,8 +55,14 @@ pub fn http_routes(tx: std::sync::mpsc::Sender<Vec<RGB<u8>>>) -> Result<()> {
                 write!(resp, "Received Led Data")?;
                 match form.convert_to_iter() {
                     Ok(converted) => {
-                        // dbg!(&converted);
-                        tx.send(converted).expect("Send Led data into channel");
+                        match tx.try_send(converted) {
+                            Ok(_) => {
+                                write!(resp, "Success")?;
+                            }
+                            Err(e) => {
+                                resp.write_all(e.to_string().as_bytes())?;
+                            }
+                        }
                     }
                     Err(e) => {
                         resp.write_all(e.to_string().as_bytes())?;
