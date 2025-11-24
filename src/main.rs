@@ -1,8 +1,10 @@
 mod wifi;
 mod led;
+mod http;
 
 use crate::wifi::{wifi_setup};
 use crate::led::{led_setup};
+use crate::http::{http_routes};
 
 use esp_idf_hal::peripherals::Peripherals;
 use smart_leds::RGB;
@@ -21,7 +23,9 @@ fn main() -> anyhow::Result<()> {
     let (tx, rx) = channel::<Vec<RGB<u8>>>();
 
     info!("check");
-    wifi_setup(modem, tx).expect("Wifi setup failed");
+    wifi_setup(modem).expect("Wifi setup failed");
+    http_routes(tx).expect("HTTP routes failed");
+
     
     led_setup(channel_rmt, led_pin, rx);
 
