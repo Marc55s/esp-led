@@ -1,7 +1,6 @@
 use anyhow::Result;
-use crate::led::LedData;
+use crate::led::{LedData, LedUpdate};
 use log::*;
-use smart_leds::RGB;
 use embedded_svc::{
     http::{Headers, Method},
     io::{Read, Write},
@@ -27,7 +26,7 @@ fn create_server() -> Result<EspHttpServer<'static>> {
     Ok(EspHttpServer::new(&server_configuration)?)
 }
 
-pub fn http_routes(tx: std::sync::mpsc::SyncSender<Vec<RGB<u8>>>) -> Result<()> {
+pub fn http_routes(tx: std::sync::mpsc::SyncSender<LedUpdate>) -> Result<()> {
     let mut server = create_server()?;
 
     server.fn_handler("/", Method::Get, |req| {
@@ -53,7 +52,7 @@ pub fn http_routes(tx: std::sync::mpsc::SyncSender<Vec<RGB<u8>>>) -> Result<()> 
             Ok(form) => {
                 info!("Recieved Post Request");
                 write!(resp, "Received Led Data")?;
-                match form.convert_to_iter() {
+                match LedUpdate::from_led_data(form) {
                     Ok(converted) => {
                         match tx.try_send(converted) {
                             Ok(_) => {

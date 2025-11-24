@@ -8,10 +8,12 @@ use crate::http::{http_routes};
 
 use esp_idf_hal::task::watchdog::TWDTDriver;
 use esp_idf_hal::peripherals::Peripherals;
-use smart_leds::RGB;
+use led::LedUpdate;
 use std::sync::mpsc::{sync_channel};
 use std::time::Duration;
 use log::*;
+
+const LEDS: usize = 100;
 
 fn main() -> anyhow::Result<()> {
     esp_idf_sys::link_patches();
@@ -22,7 +24,7 @@ fn main() -> anyhow::Result<()> {
     let channel_rmt = peripherals.rmt.channel0;
     let modem = peripherals.modem;
 
-    let (tx, rx) = sync_channel::<Vec<RGB<u8>>>(5);
+    let (tx, rx) = sync_channel::<LedUpdate>(5);
 
     info!("check");
     wifi_setup(modem).expect("Wifi setup failed");
@@ -37,7 +39,7 @@ fn main() -> anyhow::Result<()> {
     
     // Create the driver (this starts the hardware timer)
     let twdt_driver = TWDTDriver::new(peripherals.twdt, &twdt_config)?;
-    led_setup(channel_rmt, led_pin, rx, twdt_driver.clone());
+    led_setup(channel_rmt, led_pin, rx, twdt_driver.clone(), LEDS);
 
     Ok(())
 }
