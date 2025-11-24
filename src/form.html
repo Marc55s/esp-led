@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Controller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom range slider styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -8px; 
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #4b5563;
+            border-radius: 2px;
+        }
+
+        /* Hue Gradient */
+        .hue-slider::-webkit-slider-runnable-track {
+            background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans selection:bg-indigo-500 selection:text-white">
+
+    <div class="max-w-3xl mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">LED Control</h1>
+                <p class="text-slate-400 text-sm mt-1">HSV Array Controller</p>
+            </div>
+            <div id="statusIndicator" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                Ready
+            </div>
+        </div>
+
+        <!-- Global Settings -->
+        <div class="glass-panel rounded-xl p-6 mb-6">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Global Offset</label>
+            <div class="flex items-center gap-4">
+                <input type="number" id="offsetInput" value="10" min="0" class="bg-slate-800 border border-slate-600 rounded px-4 py-2 w-full focus:outline-none focus:border-indigo-500 font-mono text-lg transition-colors">
+                <span class="text-slate-500 text-sm whitespace-nowrap">Start Index</span>
+            </div>
+        </div>
+
+        <!-- Color Points -->
+        <div class="space-y-4 mb-8" id="pointsContainer">
+            <!-- Points will be injected here by JS -->
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-4 mb-8">
+            <button onclick="addPoint()" class="flex-1 py-3 rounded-lg border border-dashed border-slate-600 text-slate-400 hover:bg-slate-800 hover:text-white transition-all flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Add Color Point
+            </button>
+        </div>
+
+        <!-- Debug / JSON Output -->
+        <div class="glass-panel rounded-xl p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Payload Preview</h3>
+                <button onclick="sendData()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-semibold shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+                    Send Request
+                </button>
+            </div>
+            <pre id="jsonPreview" class="bg-black/50 p-4 rounded-lg font-mono text-xs text-green-400 overflow-x-auto border border-white/5">{}</pre>
+        </div>
+    </div>
+
+    <script>
+        // Initial State matching the user prompt structure style
+        let points = [
+            { h: 250, s: 255, v: 10 },
+            { h: 250, s: 10, v: 10 }
+        ];
+
+        const container = document.getElementById('pointsContainer');
+        const offsetInput = document.getElementById('offsetInput');
+        const jsonPreview = document.getElementById('jsonPreview');
+        const statusInd = document.getElementById('statusIndicator');
+
+        // Render the UI based on the points array
+        function renderPoints() {
+            container.innerHTML = '';
+            
+            points.forEach((point, index) => {
+                const el = document.createElement('div');
+                el.className = 'glass-panel rounded-xl p-4 md:p-6 relative group';
+                
+                // Color Preview Box
+                const colorPreview = document.createElement('div');
+                // Calculate HSV to HSL for CSS preview. 
+                // H: 0-360, S: 0-255 -> 0-100%, V: 0-255 -> Lightness calculation is complex, simplified approx for preview
+                // Simple HSL approx: H=H, S=S/2.55, L=V/2.55 (Rough approx for visual feedback)
+                const hslStr = `hsl(${point.h}, ${point.s/2.55}%, ${point.v/2.55}%)`;
+                
+                // Close/Remove Button (Only if more than 1 point)
+                let removeBtn = '';
+                if (points.length > 1) {
+                    removeBtn = `
+                        <button onclick="removePoint(${index})" class="absolute top-2 right-2 p-2 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    `;
+                }
+
+                el.innerHTML = `
+                    ${removeBtn}
+                    <div class="flex flex-col md:flex-row gap-6 items-center">
+                        <!-- Preview Circle -->
+                        <div class="w-16 h-16 rounded-full shadow-inner border-4 border-slate-800 flex-shrink-0 transition-colors duration-300" 
+                             style="background-color: ${hslStr}; box-shadow: 0 0 15px ${hslStr};"></div>
+                        
+                        <!-- Sliders -->
+                        <div class="flex-1 w-full space-y-4">
+                            <!-- Hue -->
+                            <div class="flex items-center gap-4">
+                                <span class="text-xs font-mono w-4 text-slate-400">H</span>
+                                <input type="range" min="0" max="360" value="${point.h}" 
+                                    oninput="updatePoint(${index}, 'h', this.value)"
+                                    class="hue-slider w-full h-2 rounded-lg appearance-none cursor-pointer">
+                                <span class="text-xs font-mono w-8 text-right text-slate-300">${point.h}</span>
+                            </div>
+
+                            <!-- Saturation -->
+                            <div class="flex items-center gap-4">
+                                <span class="text-xs font-mono w-4 text-slate-400">S</span>
+                                <div class="relative w-full h-2 rounded-lg bg-slate-700 overflow-hidden">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-gray-500 to-indigo-500 opacity-50"></div>
+                                    <input type="range" min="0" max="255" value="${point.s}" 
+                                        oninput="updatePoint(${index}, 's', this.value)"
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    <!-- Visual fill -->
+                                    <div class="h-full bg-slate-400" style="width: ${(point.s/255)*100}%"></div>
+                                </div>
+                                <span class="text-xs font-mono w-8 text-right text-slate-300">${point.s}</span>
+                            </div>
+
+                            <!-- Value/Brightness -->
+                            <div class="flex items-center gap-4">
+                                <span class="text-xs font-mono w-4 text-slate-400">V</span>
+                                <div class="relative w-full h-2 rounded-lg bg-slate-700 overflow-hidden">
+                                     <div class="absolute inset-0 bg-gradient-to-r from-black to-white opacity-30"></div>
+                                    <input type="range" min="0" max="255" value="${point.v}" 
+                                        oninput="updatePoint(${index}, 'v', this.value)"
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    <!-- Visual fill -->
+                                    <div class="h-full bg-white" style="width: ${(point.v/255)*100}%"></div>
+                                </div>
+                                <span class="text-xs font-mono w-8 text-right text-slate-300">${point.v}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+
+            updatePreviewText();
+        }
+
+        // Update a specific value
+        function updatePoint(index, key, value) {
+            points[index][key] = parseInt(value);
+            renderPoints(); // Re-render to update visuals and values
+            debouncedSend(); // Auto-send
+        }
+
+        function addPoint() {
+            // Duplicate the last point or default
+            const last = points[points.length - 1];
+            points.push({ ...last });
+            renderPoints();
+            debouncedSend();
+        }
+
+        function removePoint(index) {
+            if (points.length <= 1) return;
+            points.splice(index, 1);
+            renderPoints();
+            debouncedSend();
+        }
+
+        offsetInput.addEventListener('input', () => {
+            updatePreviewText();
+            debouncedSend();
+        });
+
+        // Construct JSON Payload
+        function getPayload() {
+            const hArray = points.map(p => p.h);
+            const sArray = points.map(p => p.s);
+            const vArray = points.map(p => p.v);
+
+            return {
+                offset: parseInt(offsetInput.value) || 0,
+                h: hArray,
+                s: sArray,
+                v: vArray
+            };
+        }
+
+        function updatePreviewText() {
+            const data = getPayload();
+            jsonPreview.textContent = JSON.stringify(data, null, 4);
+        }
+
+        // Send Data to Server
+        async function sendData() {
+            const data = getPayload();
+            
+            statusInd.textContent = "Sending...";
+            statusInd.className = "px-3 py-1 rounded-full text-xs font-semibold bg-yellow-900 text-yellow-200 border border-yellow-700";
+
+            try {
+                // Determine URL. If serving from file system, assumes localhost:80 for testing
+                // If served from the ESP/Server, uses relative path.
+                const url = '/led'; 
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    statusInd.textContent = "Sent";
+                    statusInd.className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-900 text-emerald-200 border border-emerald-700";
+                    setTimeout(() => {
+                         statusInd.textContent = "Ready";
+                         statusInd.className = "px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700";
+                    }, 1000);
+                } else {
+                    throw new Error('Server returned ' + response.status);
+                }
+            } catch (error) {
+                console.error("Send failed:", error);
+                statusInd.textContent = "Error";
+                statusInd.className = "px-3 py-1 rounded-full text-xs font-semibold bg-red-900 text-red-200 border border-red-700";
+            }
+        }
+
+        // Debounce utility to prevent flooding the server while dragging sliders
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
+        }
+
+        const debouncedSend = debounce(() => sendData(), 300);
+
+        // Initial render
+        renderPoints();
+
+    </script>
+</body>
+</html>
