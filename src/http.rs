@@ -10,6 +10,7 @@ use esp_idf_svc::{
 };
 
 static INDEX_HTML: &str = include_str!("http_server_page.html");
+static FORM_HTML: &str = include_str!("form.html");
 
 // Max payload length
 const MAX_LEN: usize = 8192;
@@ -32,6 +33,12 @@ pub fn http_routes(tx: std::sync::mpsc::SyncSender<LedUpdate>) -> Result<()> {
     server.fn_handler("/", Method::Get, |req| {
         req.into_ok_response()?
             .write(INDEX_HTML.as_bytes())
+            .map(|_| ())
+    })?;
+
+    server.fn_handler("/form", Method::Get, |req| {
+        req.into_ok_response()?
+            .write(FORM_HTML.as_bytes())
             .map(|_| ())
     })?;
 
