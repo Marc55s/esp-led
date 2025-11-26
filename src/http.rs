@@ -9,8 +9,8 @@ use esp_idf_svc::{
     http::server::EspHttpServer,
 };
 
-static INDEX_HTML: &str = include_str!("http_server_page.html");
-static FORM_HTML: &str = include_str!("form.html");
+static INDEX_HTML: &str = include_str!("html/http_server_page.html");
+static FORM_HTML: &str = include_str!("html/form.html");
 
 // Max payload length
 const MAX_LEN: usize = 8192;
