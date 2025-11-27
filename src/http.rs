@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crate::led::{LedData, LedUpdate};
+use crate::led::data::{LedData, LedUpdate};
 use log::*;
 use embedded_svc::{
     http::{Headers, Method},
