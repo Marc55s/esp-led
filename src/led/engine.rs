@@ -16,7 +16,6 @@ type LEDDriver<'a> = ws2812_esp32_rmt_driver::Ws2812Esp32Rmt<'a>;
 pub struct LedEngine<'a> {
     pub buf: LedBuffer,
     pub led_driver: LEDDriver<'a>,
-    pub total_leds: usize,
 }
 
 impl LedEngine<'_> {
@@ -27,9 +26,8 @@ impl LedEngine<'_> {
     ) -> Self {
         if let Ok(ws2812) = create_led_driver(channel, led_pin) {
             Self {
-                buf: LedBuffer::new(),
+                buf: LedBuffer::new(led_count),
                 led_driver: ws2812,
-                total_leds: led_count,
             }
         } else {
             panic!("Failed to create LED driver");
@@ -74,7 +72,7 @@ impl LedEngine<'_> {
         for (i, pixel) in update.data.into_iter().enumerate() {
             let target_index = update.offset + i;
 
-            if target_index < self.total_leds {
+            if target_index < self.buf.len() {
                 self.buf[target_index] = pixel;
             }
         }

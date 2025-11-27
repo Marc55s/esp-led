@@ -33,8 +33,8 @@ impl DerefMut for LedBuffer {
 }
 
 impl LedBuffer {
-    pub fn new() -> Self {
-        Self(Vec::new())
+    pub fn new(length: usize) -> Self {
+        Self(vec![RGB::new(0, 0, 0); length])
     }
 }
 
