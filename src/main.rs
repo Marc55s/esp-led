@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
     let (tx, rx) = sync_channel::<LedUpdate>(5);
 
     info!("check");
-    wifi_setup(modem).expect("Wifi setup failed");
+    let _wifi = wifi_setup(modem).expect("Wifi setup failed");
     http_routes(tx).expect("HTTP routes failed");
 
     // Watchdog
@@ -41,5 +41,8 @@ fn main() -> anyhow::Result<()> {
     let twdt_driver = TWDTDriver::new(peripherals.twdt, &twdt_config)?;
     let _led_thread = spawn_led_thread(channel_rmt, led_pin, rx, twdt_driver, LEDS);
 
-    Ok(())
+    loop {
+        info!("Still alive...");
+        std::thread::sleep(core::time::Duration::from_secs(60));
+    }
 }

@@ -17,7 +17,7 @@ const PASSWORD: &str = env!("WIFI_PASS");
 // Wi-Fi channel, between 1 and 11
 const CHANNEL: u8 = 11;
 
-pub fn wifi_setup(modem: Modem) -> anyhow::Result<()> {
+pub fn wifi_setup(modem: Modem) -> anyhow::Result<BlockingWifi<EspWifi<'static>>> {
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
 
@@ -25,8 +25,8 @@ pub fn wifi_setup(modem: Modem) -> anyhow::Result<()> {
 
     connect_wifi(&mut wifi)?;
 
-    core::mem::forget(wifi);
-    Ok(())
+    // core::mem::forget(wifi);
+    Ok(wifi)
 }
 
 fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()> {
