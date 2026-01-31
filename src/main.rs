@@ -36,7 +36,6 @@ fn main() -> anyhow::Result<()> {
         panic_on_trigger: true,
         ..Default::default()
     };
-
     // Create the driver (this starts the hardware timer)
     let twdt_driver = TWDTDriver::new(peripherals.twdt, &twdt_config)?;
     let _led_thread = spawn_led_thread(channel_rmt, led_pin, rx, twdt_driver, LEDS);

@@ -1,7 +1,5 @@
 use core::convert::TryInto;
-use embedded_svc::{
-    wifi::{AuthMethod, ClientConfiguration, Configuration},
-};
+use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
 use esp_idf_hal::modem::Modem;
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
@@ -23,6 +21,14 @@ pub fn wifi_setup(modem: Modem) -> anyhow::Result<BlockingWifi<EspWifi<'static>>
 
     let mut wifi = BlockingWifi::wrap(EspWifi::new(modem, sys_loop.clone(), Some(nvs))?, sys_loop)?;
 
+    unsafe {
+        let err = esp_idf_sys::esp_wifi_set_ps(esp_idf_sys::wifi_ps_type_t_WIFI_PS_NONE);
+        if err != 0 {
+            log::error!("Failed to disable power save: {}", err);
+        } else {
+            log::info!("Hardware Power Save is now DISABLED");
+        }
+    }
     connect_wifi(&mut wifi)?;
 
     // core::mem::forget(wifi);
