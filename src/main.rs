@@ -3,7 +3,7 @@ mod led;
 mod wifi;
 
 use crate::http::http_routes;
-use crate::wifi::wifi_setup;
+use crate::wifi::{connect_wifi, wifi_setup};
 
 use crate::led::data::LedUpdate;
 use crate::led::spawn_led_thread;
@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
     let (tx, rx) = sync_channel::<LedUpdate>(5);
 
     info!("check");
-    let _wifi = wifi_setup(modem).expect("Wifi setup failed");
+    let mut wifi = wifi_setup(modem).expect("Wifi setup failed");
     http_routes(tx).expect("HTTP routes failed");
 
     // Watchdog
@@ -41,6 +41,12 @@ fn main() -> anyhow::Result<()> {
     let _led_thread = spawn_led_thread(channel_rmt, led_pin, rx, twdt_driver, LEDS);
 
     loop {
+
+        match wifi.is_connected() {
+            Ok(false) => connect_wifi(&mut wifi).unwrap(),
+            Err(e) => panic!("Wifi connection failed: {}", e),
+            _ => (),
+        }
         info!("Still alive...");
         std::thread::sleep(core::time::Duration::from_secs(60));
     }

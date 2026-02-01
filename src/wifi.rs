@@ -35,7 +35,7 @@ pub fn wifi_setup(modem: Modem) -> anyhow::Result<BlockingWifi<EspWifi<'static>>
     Ok(wifi)
 }
 
-fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()> {
+pub fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result<()> {
     let wifi_configuration: Configuration = Configuration::Client(ClientConfiguration {
         ssid: SSID.try_into().unwrap(),
         bssid: None,
