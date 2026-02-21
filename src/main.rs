@@ -43,11 +43,11 @@ fn main() -> anyhow::Result<()> {
     loop {
 
         match wifi.is_connected() {
-            Ok(false) => connect_wifi(&mut wifi).unwrap(),
+            Ok(false) => connect_wifi(&mut wifi).expect("Wifi connection failed"),
             Err(e) => panic!("Wifi connection failed: {}", e),
             _ => (),
         }
         info!("Still alive...");
-        std::thread::sleep(core::time::Duration::from_secs(60));
+        std::thread::sleep(core::time::Duration::from_secs(1));
     }
 }
